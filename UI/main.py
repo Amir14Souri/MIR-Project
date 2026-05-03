@@ -5,8 +5,12 @@ import time
 import re
 
 # --- Path Setup ---
-sys.path.insert(0, os.path.join(sys.path[0], '../..'))
-sys.path.append('../')
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(current_dir)
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+    sys.path.insert(0, os.path.join(project_root, "Logic"))
+    sys.path.insert(0, os.path.join(project_root, "Logic", "indexer"))
 
 from Logic import utils
 from Logic.snippet import Snippet

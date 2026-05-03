@@ -98,6 +98,7 @@ class Index:
 
         try:
             #TODO
+            pass
 
         except:
             return []
@@ -325,6 +326,7 @@ class Index:
             return False
 
 def main():
+    pass
     # TODO: Run the class with needed parameters, then run check methods and finally report the results of check methods
 
                 
