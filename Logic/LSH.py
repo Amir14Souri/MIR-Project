@@ -17,6 +17,10 @@ class MinHashLSH:
         """
         self.documents = documents
         self.num_hashes = num_hashes
+        self.characteristic_matrix = None
+        self.signature_matrix = None
+        self.shingle_to_idx = None
+        
 
     def shingle_document(self, document, k=2):
         """
@@ -35,7 +39,19 @@ class MinHashLSH:
             A set of shingles.
         """
         shingles = set()
-        #TODO
+        words = document.split()
+        
+        if len(words) < k:
+            if words:
+                shingles.add(" ".join(words))
+            return shingles
+        
+        for i in range(len(words) - k + 1):
+            shingle = " ".join(words[i:i+k])
+            shingles.add(shingle)
+            
+        return shingles
+        
 
     def build_characteristic_matrix(self):
         """
@@ -46,8 +62,28 @@ class MinHashLSH:
         numpy.ndarray
             The binary characteristic matrix.
         """
-        #TODO
-        pass
+        all_shingles = set()
+        doc_shingles = []
+        
+        for doc in self.documents:
+            shingles = self.shingle_document(doc)
+            doc_shingles.append(shingles)
+            all_shingles.update(shingles)
+            
+        all_shingles = list(all_shingles)
+        shingle_to_idx = {shingle: idx for idx, shingle in enumerate(all_shingles)}
+        matrix = np.zeros((len(all_shingles), len(self.documents)), dtype=bool)
+        
+        for doc_idx, shingles in enumerate(doc_shingles):
+            for shingle in shingles:
+                shingle_idx = shingle_to_idx[shingle]
+                matrix[shingle_idx, doc_idx] = True
+                
+        self.characteristic_matrix = matrix
+        self.shingle_to_idx = shingle_to_idx
+        return matrix
+        
+        
 
     def min_hash_signature(self):
         """
@@ -58,8 +94,30 @@ class MinHashLSH:
         numpy.ndarray
             The Min-Hash signatures matrix.
         """
-        #TODO
-        pass
+        if self.characteristic_matrix is None:
+            self.build_characteristic_matrix()
+            
+        num_shingles, num_docs = self.characteristic_matrix.shape
+        matrix = np.full((self.num_hashes, num_docs), np.inf)
+        
+        # permutation: h(x) = (a * x + b) % p
+        p = self._next_prime(num_shingles)
+        a_s = np.random.randint(1, p, size=self.num_hashes).reshape(-1, 1)
+        b_s = np.random.randint(0, p, size=self.num_hashes).reshape(-1, 1)
+        
+        for doc_idx in range(num_docs):
+            true_shingle_indices = np.where(self.characteristic_matrix[:, doc_idx] == True)[0]
+            if len(true_shingle_indices) == 0:
+                continue
+            true_shingle_indices = true_shingle_indices.reshape(1, -1)
+            
+            hashes = (a_s * true_shingle_indices + b_s) % p
+            min_hashes = np.min(hashes, axis=1)
+            matrix[:, doc_idx] = min_hashes
+            
+        self.signature_matrix = matrix
+        return matrix
+        
 
     def lsh_buckets(self, signature, bands=10, rows_per_band=10):
         """
@@ -162,11 +220,27 @@ class MinHashLSH:
 
         # a good score is around 0.8
         print("your final score in near duplicate detection:", correct_near_duplicates / all_near_duplicates)
+        
+    
+    def _next_prime(self, n):
+        def is_prime(num):
+            if num < 2:
+                return False
+            for i in range(2, int(num ** 0.5) + 1):
+                if num % i == 0:
+                    return False
+            return True
+        
+        prime = n + 1
+        while not is_prime(prime):
+            prime += 1
+        return prime
 
 
 
 def main():
     #TODO perform tests
+    pass
 
 
     
