@@ -1,6 +1,8 @@
 import numpy as np
 import itertools
 import random
+import hashlib
+import json
 
 
 class MinHashLSH:
@@ -20,6 +22,7 @@ class MinHashLSH:
         self.characteristic_matrix = None
         self.signature_matrix = None
         self.shingle_to_idx = None
+        self.buckets = None
         
 
     def shingle_document(self, document, k=2):
@@ -119,14 +122,12 @@ class MinHashLSH:
         return matrix
         
 
-    def lsh_buckets(self, signature, bands=10, rows_per_band=10):
+    def lsh_buckets(self, bands=10, rows_per_band=10):
         """
         Group documents into Locality-Sensitive Hashing (LSH) buckets based on Min-Hash signatures.
 
         Parameters
         ----------
-        signature : numpy.ndarray
-            Min-Hash signatures for documents.
         bands : int
             Number of bands for LSH.
         rows_per_band : int
@@ -137,8 +138,27 @@ class MinHashLSH:
         dict
             A dictionary mapping bucket IDs to lists of document indices.
         """
-        #TODO
-        pass
+        if self.signature_matrix is None:
+            self.min_hash_signature()
+        num_docs = self.signature_matrix.shape[1]
+        buckets = {}
+        
+        for band_idx in range(bands):
+            from_row = band_idx * rows_per_band
+            to_row = min(from_row + rows_per_band, self.num_hashes)
+            
+            for doc_idx in range(num_docs):
+                band_segment = self.signature_matrix[from_row:to_row, doc_idx]
+                band_tuple = tuple(int(value) if value != np.inf else -1 for value in band_segment)
+                bucket_id = hash((band_idx, band_tuple))
+                
+                if bucket_id not in buckets.keys():
+                    buckets[bucket_id] = []
+                buckets[bucket_id].append(doc_idx)
+                    
+        self.buckets = buckets
+        return buckets
+        
 
     def perform_lsh(self):
         """
@@ -150,11 +170,12 @@ class MinHashLSH:
             A dictionary mapping bucket IDs to lists of document indices.
         """
         num_bands = 25
-        signature = self.min_hash_signature()
-        ans = self.lsh_buckets(signature, num_bands, self.num_hashes//num_bands)
+        self.min_hash_signature()
+        ans = self.lsh_buckets(num_bands, self.num_hashes//num_bands)
         return ans
 
-    def jaccard_score(self, first_set, second_set):
+
+    def _jaccard_score(self, first_set, second_set):
         """
         Calculate jaccard score for two sets.
 
@@ -170,25 +191,28 @@ class MinHashLSH:
         float
             Jaccard score.
         """
-        #TODO
-        pass
+        if 0 in [len(first_set), len(second_set)]:
+            return 1.0
+        
+        intersections = len(first_set.intersection(second_set))
+        union = len(first_set.union(second_set))
+        if union == 0:
+            return 0.0
+        
+        return intersections / union
+        
 
-    def jaccard_similarity_test(self, buckets, all_documents):
+    def jaccard_similarity_test(self):
         """
         Test your near duplicate detection code based on jaccard similarity.
-
-        Parameters
-        ----------
-        buckets : dict
-            A dictionary mapping bucket IDs to lists of document indices.
-        all_documents : list
-            The input documents for similarity analysis.
         """
+        if self.buckets is None:
+            self.lsh_buckets()
         correct_near_duplicates = 0
         all_near_duplicates = 0
 
-        for bucket_id in buckets.keys():
-            docs_in_this_bucket = buckets[bucket_id]
+        for bucket_id in self.buckets.keys():
+            docs_in_this_bucket = self.buckets[bucket_id]
             unique_doc_ids = set(docs_in_this_bucket)
             if len(unique_doc_ids) > 1:
                 combinations = list(itertools.combinations(unique_doc_ids, 2))
@@ -198,19 +222,19 @@ class MinHashLSH:
                     first_doc_id = comb[0]
                     second_doc_id = comb[1]
 
-                    first_shingled_doc = self.shingle_document(all_documents[first_doc_id], 2)
-                    second_shingled_doc = self.shingle_document(all_documents[second_doc_id], 2)
+                    first_shingled_doc = self.shingle_document(self.documents[first_doc_id], 2)
+                    second_shingled_doc = self.shingle_document(self.documents[second_doc_id], 2)
 
-                    near_duplicated_jaccard_score = self.jaccard_score(first_shingled_doc, second_shingled_doc)
+                    near_duplicated_jaccard_score = self._jaccard_score(first_shingled_doc, second_shingled_doc)
                     current_score = 0
 
                     for _ in range(5):
                         random_doc_id = first_doc_id
                         while random_doc_id == first_doc_id or random_doc_id == second_doc_id:
-                            random_doc_id = random.randint(0, len(all_documents) - 1)
-                        random_shingled_doc = self.shingle_document(all_documents[random_doc_id], 2)
+                            random_doc_id = random.randint(0, len(self.documents) - 1)
+                        random_shingled_doc = self.shingle_document(self.documents[random_doc_id], 2)
 
-                        random_jaccard_score = self.jaccard_score(first_shingled_doc, random_shingled_doc)
+                        random_jaccard_score = self._jaccard_score(first_shingled_doc, random_shingled_doc)
 
                         if near_duplicated_jaccard_score > random_jaccard_score:
                             current_score += 1
@@ -239,8 +263,14 @@ class MinHashLSH:
 
 
 def main():
-    #TODO perform tests
-    pass
+    with open("./Logic/LSHFakeData.json", "r") as f:
+        full_docs = json.load(f)
+        text_documents = [" ".join(doc.get("descriptions", [])) for doc in full_docs]
+
+    lsh = MinHashLSH(text_documents, 100)
+    buckets = lsh.perform_lsh()
+    print("buckets: ", [value if len(value) > 1 else "" for value in buckets.values()])
+    lsh.jaccard_similarity_test()
 
 
     
