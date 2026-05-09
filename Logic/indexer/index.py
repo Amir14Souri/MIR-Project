@@ -20,6 +20,7 @@ class Index:
             Indexes.DESCRIPTIONS.value: self.index_descriptions(),
         }
 
+
     def index_documents(self):
         """
         Index the documents based on the document ID. In other words, create a dictionary
@@ -30,9 +31,15 @@ class Index:
         dict
             The index of the documents based on the document ID.
         """
-
         current_index = {}
-        #TODO
+        
+        for doc in self.preprocessed_documents:
+            doc_id = doc.get("id", "")
+            if doc_id:
+                current_index[doc_id] = doc
+                
+        return current_index
+
 
     def index_characters(self):
         """
@@ -44,9 +51,28 @@ class Index:
             The index of the documents based on the characters. You should also store each terms' tf in each document.
             So the index type is: {term: {document_id: tf}}
         """
-
         index = {}
-        #TODO
+        
+        for doc in self.preprocessed_documents:
+            doc_id = doc.get("id", "")
+            characters = doc.get("characters", [])
+            
+            if characters is None:
+                continue
+            
+            if isinstance(characters, str):
+                characters = [characters]
+                
+            for character in characters:
+                terms = character.split()
+                for term in terms:
+                    if term not in index:
+                        index[term] = {}
+                    if doc_id not in index[term]:
+                        index[term][doc_id] = 0
+                    index[term][doc_id] += 1
+                    
+        return index
 
 
     def index_genres(self):
@@ -59,9 +85,28 @@ class Index:
             The index of the documents based on the genres. You should also store each terms' tf in each document.
             So the index type is: {term: {document_id: tf}}
         """
-
         index = {}
-        #TODO  
+        
+        for doc in self.preprocessed_documents:
+            doc_id = doc.get("id", "")
+            genres = doc.get("genres", [])
+            
+            if genres is None:
+                continue
+            
+            if isinstance(genres, str):
+                genres = [genres]
+                
+            for genre in genres:
+                terms = genre.split()
+                for term in terms:
+                    if term not in index:
+                        index[term] = {}
+                    if doc_id not in index[term]:
+                        index[term][doc_id] = 0
+                    index[term][doc_id] += 1
+                    
+        return index
 
 
     def index_descriptions(self):
@@ -74,9 +119,24 @@ class Index:
             The index of the documents based on the descriptions. You should also store each terms' tf in each document.
             So the index type is: {term: {document_id: tf}}
         """
-
-        current_index = {}
-        #TODO
+        index = {}
+        
+        for doc in self.preprocessed_documents:
+            doc_id = doc.get("id", "")
+            description = doc.get("description", [])
+            
+            if not description:
+                continue
+                
+            terms = description.split()
+            for term in terms:
+                if term not in index:
+                    index[term] = {}
+                if doc_id not in index[term]:
+                    index[term][doc_id] = 0
+                index[term][doc_id] += 1
+                    
+        return index
 
 
     def get_posting_list(self, word: str, index_type: str):
@@ -97,11 +157,26 @@ class Index:
         """
 
         try:
-            #TODO
-            pass
-
+            if index_type == Indexes.DOCUMENTS.value:
+                posting_list = []
+                for doc_id, doc in self.index[index_type].items():
+                    doc_text = " ".join([
+                        doc.get("title", ""),
+                        doc.get("description", ""),
+                        " ".join(doc.get("author", [])) if isinstance(doc.get("author"), list) else doc.get("author", ""),
+                        " ".join(doc.get("genres", [])) if isinstance(doc.get("genres"), list) else doc.get("genres", ""),
+                        " ".join(doc.get("characters", [])) if isinstance(doc.get("characters"), list) else doc.get("characters", ""),
+                    ])
+                    if word in doc_text.split():
+                        posting_list.append(doc_id)
+                return posting_list
+            else:
+                if word in self.index[index_type]:
+                    return list(self.index[index_type][word].keys())
+                return []
         except:
             return []
+
 
     def add_document_to_index(self, document: dict):
         """
@@ -130,6 +205,7 @@ class Index:
     def delete_dummy_keys(self, index_before_add, index, key):
         if len(index_before_add[index][key]) == 0:
             del index_before_add[index][key]
+
 
     def check_if_key_exists(self, index_before_add, index, key):
         if not index_before_add[index].__contains__(key):
@@ -209,6 +285,7 @@ class Index:
             print('Remove is correct')
         else:
             print('Remove is incorrect')
+
 
     def store_index(self, path: str = 'C:\\Users\\amir\\Desktop\\codes\\MIR-Project-SP2026\\answer\\indexes\\', index_name: str = None):
         """
