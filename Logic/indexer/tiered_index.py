@@ -29,6 +29,7 @@ class Tiered_index:
         self.store_tiered_index(path, Indexes.DESCRIPTIONS)
         self.store_tiered_index(path, Indexes.GENRES)
 
+
     def convert_to_tiered_index(
         self, first_tier_threshold: int, second_tier_threshold: int, index_name
     ):
@@ -61,12 +62,30 @@ class Tiered_index:
         first_tier = {}
         second_tier = {}
         third_tier = {}
-        #TODO
+        
+        for term, postings in current_index.items():
+            sorted_docs = sorted(postings.items(), key=lambda x: x[1], reverse=True)
+            
+            for doc_id, tf in sorted_docs:
+                if tf >= first_tier_threshold:
+                    if term not in first_tier:
+                        first_tier[term] = {}
+                    first_tier[term][doc_id] = tf
+                elif tf >= second_tier_threshold:
+                    if term not in second_tier:
+                        second_tier[term] = {}
+                    second_tier[term][doc_id] = tf
+                else:
+                    if term not in third_tier:
+                        third_tier[term] = {}
+                    third_tier[term][doc_id] = tf
+        
         return {
             "first_tier": first_tier,
             "second_tier": second_tier,
             "third_tier": third_tier,
         }
+
 
     def store_tiered_index(self, path, index_name):
         """
