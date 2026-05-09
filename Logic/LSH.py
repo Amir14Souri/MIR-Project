@@ -262,7 +262,7 @@ class MinHashLSH:
 
 
 
-def main():
+def test():
     with open("./Logic/LSHFakeData.json", "r") as f:
         full_docs = json.load(f)
         text_documents = [" ".join(doc.get("descriptions", [])) for doc in full_docs]
@@ -273,6 +273,40 @@ def main():
     lsh.jaccard_similarity_test()
 
 
+def main():
+    with open("preprocessed.json", "r") as f:
+        docs = json.load(f)
+        
+    doc_texts = [doc.get("title", "") + " " + doc.get("description", "") for doc in docs]
+    lsh = MinHashLSH(doc_texts, 200)
+    buckets = lsh.perform_lsh()
+    
+    docs_to_remove = set()
+    checked_pairs = set()
+    
+    for doc_list in buckets.values():
+        unique_docs = list(set(doc_list))
+        if len(unique_docs) > 1:
+            for i in range(len(unique_docs)):
+                for j in range(i + 1, len(unique_docs)):
+                    pair = tuple(sorted([unique_docs[i], unique_docs[j]]))
+                    if pair in checked_pairs:
+                        continue
+                    checked_pairs.add(pair)
+                    
+                    sig1 = lsh.signature_matrix[:, pair[0]]
+                    sig2 = lsh.signature_matrix[:, pair[1]]
+                    estimated_jaccard = np.sum(sig1 == sig2) / lsh.num_hashes
+                    
+                    if estimated_jaccard > 0.8:
+                        docs_to_remove.add(pair[1])
+                        
+    filtered_docs = [doc for i, doc in enumerate(docs) if i not in docs_to_remove]
+    print(f"Removed {len(docs) - len(filtered_docs)} duplicates, {len(filtered_docs)} remaining")
+    with open('preprocessed.json', 'w', encoding='utf-8') as f:
+        json.dump(filtered_docs, f, indent=2, ensure_ascii=False)
+
     
 if __name__ == '__main__':
+    # test()
     main()
