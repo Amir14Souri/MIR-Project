@@ -187,7 +187,28 @@ class Index:
         document : dict
             Document to add to all the indexes
         """
-        #TODO
+        doc_id = document.get("id", "")
+        if not doc_id:
+            return
+        
+        self.index[Indexes.DOCUMENTS.value][doc_id] = document
+        
+        for field, index_key in enumerate(
+            ["characters", "genres", "description"],
+            [Indexes.CHARACTERS.value, Indexes.GENRES.value, Indexes.DESCRIPTIONS.value]
+        ):
+            items = document.get("items", [])
+            if isinstance(items, str):
+                items = [items]
+            items_text = " ".join(items)
+            if items_text:
+                terms = items_text.split()
+                for term in terms:
+                    if term not in self.index[index_key]:
+                        self.index[index_key][term] = {}
+                    if doc_id not in self.index[index_key][term]:
+                        self.index[index_key][term][doc_id] = 0
+                    self.index[index_key][term][doc_id] += 1
 
 
     def remove_document_from_index(self, document_id: str):
@@ -199,8 +220,16 @@ class Index:
         document_id : str
             ID of the document to remove from all the indexes
         """
-
-        #TODO
+        if document_id in self.index[Indexes.DOCUMENTS.value]:
+            del self.index[Indexes.DOCUMENTS.value][document_id]
+            
+        for index_key in [Indexes.CHARACTERS.value, Indexes.GENRES.value, Indexes.DESCRIPTIONS.value]:
+            for term in list(self.index[index_key].keys()):
+                if document_id in self.index[index_key][term]:
+                    del self.index[index_key][term][document_id]
+                    if len(self.index[index_key][term]) == 0:
+                        del self.index[index_key][term]
+        
 
     def delete_dummy_keys(self, index_before_add, index, key):
         if len(index_before_add[index][key]) == 0:
@@ -305,7 +334,10 @@ class Index:
         if index_name not in self.index:
             raise ValueError('Invalid index name')
 
-        #TODO
+        file_path = os.path.join(path, f'{index_name}_index.json')
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump(self.index[index_name], f, indent=4, ensure_ascii=False)
+            
 
     def load_index(self, path: str):
         """
@@ -316,9 +348,11 @@ class Index:
         path : str
             Path to load the file
         """
-
-        #TODO
-        pass
+        for index_name in self.index.keys():
+            file_path = os.path.join(path, f'{index_name}_index.json')
+            if os.path.exists(file_path):
+                with open(file_path, "r", encoding="utf-8") as f:
+                    self.index[index_name] = json.load(file)
 
 
     def check_if_index_loaded_correctly(self, index_type: str, loaded_index: dict):
@@ -340,6 +374,7 @@ class Index:
         print('comparing indexes')
         
         return self.index[index_type] == loaded_index
+
 
     def check_if_indexing_is_good(self, index_type: str, check_word: str = 'good'):
         """
@@ -380,7 +415,6 @@ class Index:
 
         # check by getting the posting list of the word
         start = time.time()
-        # TODO: based on your implementation, you may need to change the following line
         posting_list = self.get_posting_list(check_word, index_type)
 
         end = time.time()
@@ -403,11 +437,26 @@ class Index:
             return False
 
 def main():
-    pass
-    # TODO: Run the class with needed parameters, then run check methods and finally report the results of check methods
+    with open("preprocessed.json", "r", encoding="utf-8") as f:
+        docs = json.load(f)
+        
+    index = Index(docs)
+    
+    print("Testing descriptions index:")
+    index.check_if_indexing_is_good('description', 'good')
+    
+    print("\nTesting characters index:")
+    index.check_if_indexing_is_good('characters', 'character_name')
+    
+    print("\nTesting add/remove:")
+    index.check_add_remove_is_correct()
 
-                
-
+    index.store_index(path='indexes/', index_name=Indexes.DOCUMENTS.value)
+    index.store_index(path='indexes/', index_name=Indexes.CHARACTERS.value)
+    index.store_index(path='indexes/', index_name=Indexes.GENRES.value)
+    index.store_index(path='indexes/', index_name=Indexes.DESCRIPTIONS.value)
+    
+    print("\nIndexes stored successfully!")
 
 
 
