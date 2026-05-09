@@ -19,7 +19,7 @@ class Preprocessor:
         
         self.stopwords = set()
         with open(custom_stopwords_path, "r") as f:
-            self.stopwords = set(f.readlines().split("\n").strip().lower())
+            self.stopwords = set([item.strip().lower() for item in f.readlines()])
 
 
 
@@ -33,7 +33,7 @@ class Preprocessor:
         
         tokens = text.split()
         tokens = [self.normalize(token) for token in tokens]
-        return "".join(tokens)
+        return " ".join(tokens)
 
 
     def remove_stopwords(self, text: str) -> list:
@@ -59,7 +59,8 @@ class Preprocessor:
         list
             The normalized word.
         """
-        return self.lemmatizer.lemmatize(word)
+        stemmed = self.stemmer.stem(word)
+        return self.lemmatizer.lemmatize(stemmed)
         
 
     def preprocess_many(self, documents: list) -> list:
@@ -86,7 +87,7 @@ def preprocess_docs(docs: list):
         Preprocesses the following fields: title, description, author
         Handles both string and list field types
     """
-    preprocessor = Preprocessor()
+    preprocessor = Preprocessor(custom_stopwords_path="./stopwords.txt")
     keys = ["title", "description", "author"]
     
     for key in keys:
@@ -119,8 +120,8 @@ def csv_to_json(csv_file_path, json_file_path):
     """
     books = []
     
-    with open(csv_file_path, "r") as csv:
-        reader = csv.DictReader(csv)
+    with open(csv_file_path, "r") as file:
+        reader = csv.DictReader(file)
         
         for row in reader:
             book = {
@@ -130,20 +131,20 @@ def csv_to_json(csv_file_path, json_file_path):
                 "description": row.get("description", ""),
                 "genres": [g.strip() for g in row.get("genres", "").split(",")],
                 "characters": [c.strip() for c in row.get("characters", "").split(",")],
-                "languages": [l.strip() for l in row.get("languages", "").split(",")],
+                "languages": [l.strip() for l in row.get("language", "").split(",")],
                 "publish_date": row.get("publish_date", ""),
-                "num_pages": int(row.get("num_pages")) if row.get("num_pages", "").isdigit() else 0,
+                "num_pages": int(float(row.get("num_pages"))) if row.get("num_pages", "") else 0,
                 "avg_rating": float(row.get("avg_rating")) if row.get("avg_rating", "") else 0.0,
             }
             books.append(book)
         
-        with open(json_file_path, "w") as json:
-            json.dump(books, json, indent=2, ensure_ascii=False)
+        with open(json_file_path, "w") as file:
+            json.dump(books, file, indent=2, ensure_ascii=False)
 
 
 
 if __name__ == '__main__':
-    csv_to_json('top_3000_rated_books.csv','crawled.json')
+    csv_to_json('top_3000_rated_books.csv', 'crawled.json')
 
     json_file_path = 'crawled.json'
     with open(json_file_path, "r") as file:
@@ -151,4 +152,4 @@ if __name__ == '__main__':
 
     preprocess_docs(docs)
     with open('preprocessed.json', "w") as file:
-        file.write(json.dumps(docs))
+        json.dump(docs, file, indent=2, ensure_ascii=False)
