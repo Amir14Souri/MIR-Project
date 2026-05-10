@@ -24,6 +24,7 @@ class Snippet:
         self.remove_stopword = remove_stopword_function
         self.win_size = (2 * number_of_words_on_each_side) + 1
 
+
     def find_snippet(self, raw_doc: str, query: str) -> Tuple[str, List[str]]:
         """
         Main orchestrator for snippet generation.
@@ -36,8 +37,25 @@ class Snippet:
             final_snippet (str): The formatted snippet with '***' highlighting and '...' separators.
             not_exist_words (list): The list of words from the query that were not found in the document.
         """
-        #TODO
-        pass
+        doc_tokens = raw_doc.split()
+        normalized_cache = [self.normalize(token) for token in doc_tokens]
+        doc_normalized_set = set(normalized_cache)
+        
+        query_tokens = self.remove_stopword(query)
+        query_set = set()
+        not_exist_words = []
+        for token in query_tokens:
+            normalized = self.normalize(token)
+            if normalized:
+                query_set.add(normalized)
+                if normalized not in doc_normalized_set:
+                    not_exist_words.append(token)
+                    
+        windows = self._identify_best_windows(doc_tokens, normalized_cache, query_set)
+        merged_windows = self._merge_windows(windows)
+        final_snippet = self._create_snippet_text(doc_tokens, normalized_cache, merged_windows, query_set)
+        
+        return final_snippet, not_exist_words
 
 
     def _identify_best_windows(self, doc_tokens: list, normalized_cache: list, query_set: set) -> List[Tuple[int, int]]:
@@ -52,8 +70,30 @@ class Snippet:
         Returns:
             list: A list of (start_index, end_index) for the best windows found.
         """
-        #TODO
-        pass
+        n = len(doc_tokens)
+        if n == 0:
+            return []
+        
+        padded_tokens = [''] * self.number_of_words_on_each_side + doc_tokens + [''] * self.number_of_words_on_each_side
+        padded_normalized = [''] * self.number_of_words_on_each_side + normalized_cache + [''] * self.number_of_words_on_each_side
+        
+        best_windows = []
+        used_centers = set()
+        
+        for i in range(self.number_of_words_on_each_side, len(padded_tokens) - self.number_of_words_on_each_side):
+            if padded_normalized[i] in query_set and padded_normalized[i] not in used_centers:
+                start = max(0, i - self.number_of_words_on_each_side)
+                end = min(len(padded_tokens) - 1, i + self.number_of_words_on_each_side)
+                
+                score = sum(1 for j in range(start, end + 1) if padded_normalized[j] in query_set)
+                orig_start = start - self.number_of_words_on_each_side
+                orig_end = end - self.number_of_words_on_each_side
+                
+                best_windows.append((orig_start, orig_end))
+                used_centers.add(padded_normalized[i])
+        
+        return best_windows
+        
 
     def _merge_windows(self, windows: List[Tuple[int, int]]) -> List[Tuple[int, int]]:
         """
@@ -67,9 +107,20 @@ class Snippet:
         """
         if not windows:
             return []
+        
+        sorted_windows = sorted(windows, key=lambda x: x[0])
+        merged = [sorted_windows[0]]
+        
+        for current_start, current_end in sorted_windows[1:]:
+            last_start, last_end = merged[-1]
             
-        #TODO
-        pass
+            if current_start <= last_end + 1:
+                merged[-1] = (last_start, max(last_end, current_end))
+            else:
+                merged.append((current_start, current_end))
+        
+        return merged
+
 
     def _create_snippet_text(self, doc_tokens: list, normalized_cache: list, 
                              merged_windows: List[Tuple[int, int]], query_set: set) -> str:
@@ -87,5 +138,28 @@ class Snippet:
                 example: "The ***wizard*** went to ***Hogwarts.*** The ***wizard*** loved magic."
 
         """
-        #TODO
-        pass
+        if not merged_windows:
+            return " ... "
+        
+        snippet_parts = []
+        last_end = -2
+        
+        for start, end in merged_windows:
+            start = max(0, start)
+            end = min(len(doc_tokens) - 1, end)
+            
+            if snippet_parts and start > last_end + 1:
+                snippet_parts.append("...")
+            
+            window_tokens = []
+            for i in range(start, end + 1):
+                token = doc_tokens[i]
+                if normalized_cache[i] in query_set:
+                    window_tokens.append(f"***{token}***")
+                else:
+                    window_tokens.append(token)
+            
+            snippet_parts.append(" ".join(window_tokens))
+            last_end = end
+        
+        return " ".join(snippet_parts)
