@@ -193,11 +193,11 @@ class Index:
         
         self.index[Indexes.DOCUMENTS.value][doc_id] = document
         
-        for field, index_key in enumerate(
+        for field, index_key in zip(
             ["characters", "genres", "description"],
             [Indexes.CHARACTERS.value, Indexes.GENRES.value, Indexes.DESCRIPTIONS.value]
         ):
-            items = document.get("items", [])
+            items = document.get(field, [])
             if isinstance(items, str):
                 items = [items]
             items_text = " ".join(items)
