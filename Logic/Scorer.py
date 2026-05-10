@@ -24,22 +24,33 @@ class Scorer:
         """
         Returns a list of documents that contain at least one of the terms in the query.
         """
-        #TODO
-        pass
+        docs = set()
+        for term in query.split():
+            if term in self.index:
+                docs.update(self.index[term].keys())
+        return docs
+    
 
     def get_idf(self, term):
         """
         Returns the inverse document frequency of a term.
         """
-        #TODO
-        pass
+        if term not in self.idf:
+            df = len(self.index.get(term, {}))
+            if df == 0:
+                self.idf[term] = 0
+            else:
+                self.idf[term] = math.log10(self.N / df)
+        return self.idf[term]
+        
 
     def get_query_tfs(self, query):
         """
         Returns the term frequencies of the terms in the query.
         """
-        #TODO
-        pass
+        query_terms = query.split()
+        return dict(Counter(query_terms))
+        
 
     def compute_scores_with_vector_space_model(self, query, method):
         """
@@ -103,19 +114,32 @@ class Scorer:
             - 'l'
 
         """
-        #TODO
-        pass
+        if mode == "l":
+            return 1 + math.log10(tf) if tf > 0 else 0
+        return tf
+        
 
     def _cosine_normalize(self, weights):
         """
         Normalize a vector of term weights using cosine normalization.
         """
-        #TODO
-        pass
+        norm = math.sqrt(sum(w ** 2 for w in weights.values()))
+        if norm == 0:
+            return weights
+        return {term: w / norm for term, w in weights.items()}
+        
 
     def _prepare_collection_stats(self):
         """
         Compute and cache collection-wide statistics for the index.
         """
-        #TODO
-        pass
+        if self._collection_frequencies is not None:
+            return
+        
+        self._collection_frequencies = {}
+        self._collection_length = 0
+        
+        for term, postings in self.index.items():
+            total_tf = sum(postings.values())
+            self._collection_frequencies[term] = total_tf
+            self._collection_length += total_tf
