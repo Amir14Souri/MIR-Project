@@ -25,6 +25,7 @@ class SpellCorrection:
             self.all_k_gram_words = {}
             self.word_counter = {}
 
+
     def k_gram_word(self, word, k=2):
         """
         Convert a word into a set of k-grams.
@@ -41,8 +42,11 @@ class SpellCorrection:
         set
             A set of k-grams.
         """
-        #TODO
-        pass
+        word = f"${word}$"
+        if len(word) < k:
+            return set([word])
+        return set([word[i:i+k] for i in range(len(word) - k + 1)])
+
 
     def jaccard_score(self, first_set, second_set):
         """
@@ -60,8 +64,16 @@ class SpellCorrection:
         float
             Jaccard score.
         """
-        #TODO
-        pass
+        if len(first_set) == 0 and len(second_set) == 0:
+            return 1.0
+        
+        intersection = len(first_set.intersection(second_set))
+        union = len(first_set.union(second_set))
+        if union == 0:
+            return 0.0
+        
+        return intersection / union
+        
 
     def k_gramming_and_counting(self, all_documents):
         """
@@ -79,8 +91,18 @@ class SpellCorrection:
         word_counter : dict
             A dictionary from words to their TFs.
         """
-        #TODO
-        pass
+        all_k_gram_words = {}
+        word_counter = {}
+        
+        for doc in all_documents:
+            words = doc.split()
+            for word in words:
+                if word not in word_counter:
+                    word_counter[word] = 0
+                    all_k_gram_words[word] = self.k_gram_word(word)
+                word_counter[word] += 1
+        
+        return all_k_gram_words, word_counter
 
     def save(self, path):
         """
@@ -93,6 +115,7 @@ class SpellCorrection:
         with open(path, 'wb') as f:
             pickle.dump(data, f)
 
+
     def load(self, path):
         """
         Load the shingle data and word counter from a file.
@@ -101,6 +124,7 @@ class SpellCorrection:
             data = pickle.load(f)
             self.all_k_gram_words = data['all_k_gram_words']
             self.word_counter = data['word_counter']
+
 
     def find_nearest_words(self, word):
         """
@@ -116,8 +140,17 @@ class SpellCorrection:
         list of str
             5 nearest words.
         """
-        #TODO
-        pass
+        word_k_grams = self.k_gram_word(word)
+        
+        candidates = []
+        for word, k_grams in self.all_k_gram_words.items():
+            score = self.jaccard_score(word_k_grams, k_grams)
+            if score > 0.4:
+                candidates.append((word, score, self.word_counter.get(word, 0)))
+            
+        candidates.sort(key=lambda x: (x[1], x[2]))
+        return [candidate[0] for candidate in candidates[:5]]
+        
 
     def spell_check(self, query):
         """
@@ -133,5 +166,34 @@ class SpellCorrection:
         str
             Correct form of the query.
         """
-        #TODO
-        pass
+        corrected_words = []
+        
+        for word in query.split():
+            if word in self.word_counter:
+                corrected_words.append(word)
+            else:
+                candidates = self.find_nearest_words(word)
+                if candidates:
+                    corrected_words.append(candidates[0])
+                else:
+                    corrected_words.append(word)
+                    
+        return " ".join(corrected_words)
+    
+    
+
+def test():
+    import json
+    
+    with open("./Logic/LSHFakeData.json", "r") as f:
+        full_docs = json.load(f)
+        text_documents = [" ".join(doc.get("descriptions", [])) for doc in full_docs]
+
+    spell_correction = SpellCorrection(text_documents)
+    corrected = spell_correction.spell_check(input("Type your query:\n"))
+    print(f'Did you mean: "{corrected}"?')
+    
+    
+
+if __name__ == "__main__":
+    test()
