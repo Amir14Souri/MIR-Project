@@ -56,8 +56,18 @@ class Scorer:
         """
         Compute scores with vector space model.
         """
-        #TODO
-        pass
+        doc_method, query_method = method.split(".")
+        query_tfs = self.get_query_tfs(query)
+        docs = self.get_list_of_documents(query)
+        scores = {}
+        
+        for doc_id in docs:
+            socre = self.get_vector_space_model_score(
+                query, query_tfs, doc_id, doc_method, query_method
+            )
+            scores[doc_id] = score
+            
+        return scores
 
 
     def get_vector_space_model_score(
@@ -66,8 +76,28 @@ class Scorer:
         """
         Returns the Vector Space Model score of a document for a query.
         """
-        #TODO
-        pass
+        doc_weights = {}
+        for term in query_tfs:
+            if term in self.index and document_id in self.index[term]:
+                tf = self.index[term][document_id]
+                tf = self._apply_tf(tf, document_method[0])
+                if document_method[1] == "t":
+                    tf *= self.get_idf(term)
+                doc_weights[term] = tf
+        if document_method[2] == "c":
+            doc_weights = self._cosine_normalize(doc_weights)
+            
+        query_weights = {}
+        for term, tf in query_tfs.items():
+            tf = self._apply_tf(tf, document_method[0])
+            if document_method[1] == "t":
+                tf *= self.get_idf(term)
+            query_weights[term] = tf
+        if document_method[2] == "c":
+            query_weights = self._cosine_normalize(query_weights)
+            
+        score = sum(doc_weights.get(term, 0) * query_weights.get(term, 0) for term in query_weights)
+        return score
 
 
     def compute_socres_with_okapi_bm25(
@@ -76,8 +106,17 @@ class Scorer:
         """
         Compute scores with Okapi BM25.
         """
-        #TODO
-        pass
+        docs = self.get_list_of_documents(query)
+        scores = {}
+        
+        for doc_id in docs:
+            socre = self.get_okapi_bm25_score(
+                query, doc_id, average_document_field_length, document_lengths
+            )
+            scores[doc_id] = score
+            
+        return scores
+        
 
     def get_okapi_bm25_score(
         self, query, document_id, average_document_field_length, document_lengths
@@ -85,8 +124,24 @@ class Scorer:
         """
         Returns the Okapi BM25 score of a document for a query.
         """
-        #TODO
-        pass
+        k1 = 1.5
+        b = 0.75
+        score = 0
+        
+        doc_len = document_lengths.get(document_id, 0)
+        
+        for term in query.split():
+            if term in self.index and document_id in self.index[term]:
+                tf = self.index[term][document_id]
+                df = len(self.index[term])
+                idf = self.get_idf(term)
+                numerator = tf * (k1 + 1)
+                denumerator = tf + k1 * (1 - b + b * (doc_len / average_document_field_length))
+                
+                score += idf * (numerator / denumerator)
+        
+        return score
+    
 
     def compute_scores_with_unigram_model(
         self, query, smoothing_method, document_lengths=None, alpha=0.5, lamda=0.5
@@ -94,8 +149,18 @@ class Scorer:
         """
         Calculates scores for each document based on the unigram model.
         """
-        #TODO
-        pass
+        self._prepare_collection_stats()
+        docs = self.get_list_of_documents(query)
+        scores = {}
+        
+        for doc_id in docs:
+            socre = self.compute_score_with_unigram_model(
+                query, doc_id, smoothing_method, document_lengths, alpha, lamda
+            )
+            scores[doc_id] = score
+            
+        return scores
+
 
     def compute_score_with_unigram_model(
         self, query, document_id, smoothing_method, document_lengths, alpha, lamda
@@ -103,8 +168,28 @@ class Scorer:
         """
         Calculates the unigram score of a document for a query.
         """
-        #TODO
-        pass
+        score = 1.0
+        doc_len = document_lengths.get(document_id, 1) if document_lengths else 1
+        
+        for term in query.split():
+            tf = self.index.get(term, {}).get(document_id, 0)
+            p_doc = tf / doc_len if doc_len > 0 else 0
+            
+            collection_tf = self._collection_frequencies.get(term, 0)
+            p_collection = collection_tf / self._collection_length if self._collection_length > 0 else 0
+            
+            if smoothing_method == "naive":
+                p = p_doc if p_doc > 0 else p_collection
+            elif smoothing_method == "bayes":
+                mu = alpha * self._collection_length  # Dirichlet
+                p = (tf + mu * p_collection) / (doc_len + mu)
+            elif smoothing_method == "mixture":
+                p = lamda * p_doc + (1 - lamda) * p_collection
+                
+            socre *= p
+            
+        return scores
+        
 
     def _apply_tf(self, tf, mode):
         """
