@@ -1,10 +1,10 @@
-from preprocess import Preprocessor
-from Scorer import Scorer
+from Logic.preprocess import Preprocessor
+from Logic.Scorer import Scorer
 from Logic.indexer import Indexes, Index_types, Index_reader
 
 
 class SearchEngine:
-    def __init__(self, path="index/"):
+    def __init__(self, path="indexes/"):
         """
         Initializes the search engine based on your indexing structure.
         """
@@ -82,19 +82,29 @@ class SearchEngine:
             selected retrieval approach, aggregates the field scores, and returns
             the ranked result list.
         """
-        #TODO
-        pass
+        preprocessor = Preprocessor()
+        if isinstance(query, str):
+            query = preprocessor.preprocess_text(query)
+        query_tokens = query.split()
+        
+        scores = {}
+        if method == "unigram":
+            self.find_scores_with_unigram_model(
+                query_tokens, smoothing_method, weights, scores, alpha, lamda
+            )
+        elif safe_ranking:
+            self.find_scores_with_safe_ranking(query_tokens, method, weights, scores)
+        else:
+            self.find_scores_with_unsafe_ranking(
+                query_tokens, method, weights, max_results, scores
+            )
+            
+        ranked_results = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+        if max_results and len(ranked_results) > max_results:
+            ranked_results = ranked_results[:max_results]
+            
+        return ranked_results
 
-
-    def aggregate_scores(self, weights, scores, final_scores):
-        """
-        Aggregates the scores of different fields.
-        """
-        for field, weight in weights.items():
-            if weight == 0 or field not in scores:
-                continue
-            for doc_id, score in scores[field].items():
-                final_scores[doc_id] = final_scores.get(doc_id, 0.0) + weight * score
 
     def find_scores_with_unsafe_ranking(self, query, method, weights, max_results, scores):
         """
@@ -113,10 +123,41 @@ class SearchEngine:
         Function:
             Computes document scores using the tiered index structure.
         """
-        #TODO
-        pass
-
-
+        final_scores = {}
+        remaining = max_results if max_results else float('inf')
+        
+        for tier_name in ["first_tier", "second_tier", "third_tier"]:
+            if remaining <= 0:
+                break
+            
+            tier_scores = {}
+            for field in self.fields:
+                if weights.get(field, 0) == 0:
+                    continue
+                
+                tiered_index = self.tiered_index[field].get(tier_name, {})
+                scorer = Scorer(tiered_index, self.metadata_index.get("document_count", 0))
+                
+                if method == "bm25":
+                    avg_len = self._get_average_length(field)
+                    field_scores = scorer.compute_scores_with_okapi_bm25(
+                        " ".join(query), avg_len, self.document_lengths_index[field]
+                    )
+                else:
+                    field_scores = scorer.compute_scores_with_vector_space_model(
+                        " ".join(query), method
+                    )
+                    
+                for doc_id, score in field_scores.items():
+                    tier_scores[doc_id] = tier_scores.get(doc_id, 0.0) + weights[field] * score
+                    
+            for doc_id, score in tier_scores.items():
+                final_scores[doc_id] = final_scores.get(doc_id, 0.0) + score
+                
+            remaining = max_results - len(final_scores) if max_results else float('inf')
+            
+        scores.update(final_scores)
+                
 
     def find_scores_with_safe_ranking(self, query, method, weights, scores):
         """
@@ -134,9 +175,26 @@ class SearchEngine:
         Function:
             Computes document scores using the complete index of each field.
         """
-        # TODO
-        pass
+        for field in self.fields:
+            if weights.get(field, 0) == 0:
+                continue
 
+            scorer = Scorer(self.document_indexes[field], self.metadata_index.get("document_count", 0))
+            
+            if method == "bm25":
+                avg_len = self._get_average_length(field)
+                field_scores = scorer.compute_scores_with_okapi_bm25(
+                    " ".join(query), avg_len, self.document_lengths_index[field]
+                )
+            else:
+                field_scores = scorer.compute_scores_with_vector_space_model(
+                    " ".join(query), method
+                )
+                
+            for doc_id, score in field_scores.items():
+                scores[doc_id] = scores.get(doc_id, 0.0) + weights[field] * score
+        
+        
     def find_scores_with_unigram_model(
         self, query, smoothing_method, weights, scores, alpha=0.5, lamda=0.5
     ):
@@ -157,17 +215,20 @@ class SearchEngine:
         Function:
             Computes document scores for each field using a unigram language model.
         """
-        # TODO
-        pass
+        for field in self.fields:
+            if weights.get(field, 0) == 0:
+                continue
+            
+            tiered_index = self.tiered_index[field].get(tier_name, {})
+            scorer = Scorer(tiered_index, self.metadata_index.get("document_count", 0))
+            
+            field_scores = scorer.compute_scores_with_unigram_model(
+                " ".join(query), smoothing_method, self.document_lengths_index[field], alpha, lamda
+            )
+                
+            for doc_id, score in field_scores.items():
+                tier_scores[doc_id] = tier_scores.get(doc_id, 0.0) + weights[field] * score
 
-    def merge_scores(self, scores1, scores2):
-        """
-        Merges two dictionaries of scores.
-        """
-        merged = dict(scores1)
-        for doc_id, score in scores2.items():
-            merged[doc_id] = merged.get(doc_id, 0.0) + score
-        return merged
 
     def _get_average_length(self, field):
         avg_lengths = self.metadata_index.get("average_document_length", {})

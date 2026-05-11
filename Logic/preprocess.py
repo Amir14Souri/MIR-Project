@@ -6,7 +6,7 @@ from nltk.stem import PorterStemmer, WordNetLemmatizer
 
 
 class Preprocessor:
-    def __init__(self, custom_stopwords_path='./Logic/stopwords.txt'):
+    def __init__(self, custom_stopwords_path='./stopwords.txt'):
         """
         Initialize the preprocessor, compile patterns, load components, etc.
         """
@@ -87,7 +87,7 @@ def preprocess_docs(docs: list):
         Preprocesses the following fields: title, description, author
         Handles both string and list field types
     """
-    preprocessor = Preprocessor(custom_stopwords_path="./stopwords.txt")
+    preprocessor = Preprocessor()
     keys = ["title", "description", "author"]
     
     for key in keys:

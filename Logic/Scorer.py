@@ -62,7 +62,7 @@ class Scorer:
         scores = {}
         
         for doc_id in docs:
-            socre = self.get_vector_space_model_score(
+            score = self.get_vector_space_model_score(
                 query, query_tfs, doc_id, doc_method, query_method
             )
             scores[doc_id] = score
@@ -100,7 +100,7 @@ class Scorer:
         return score
 
 
-    def compute_socres_with_okapi_bm25(
+    def compute_scores_with_okapi_bm25(
         self, query, average_document_field_length, document_lengths
     ):
         """
@@ -110,7 +110,7 @@ class Scorer:
         scores = {}
         
         for doc_id in docs:
-            socre = self.get_okapi_bm25_score(
+            score = self.get_okapi_bm25_score(
                 query, doc_id, average_document_field_length, document_lengths
             )
             scores[doc_id] = score
@@ -154,7 +154,7 @@ class Scorer:
         scores = {}
         
         for doc_id in docs:
-            socre = self.compute_score_with_unigram_model(
+            score = self.compute_score_with_unigram_model(
                 query, doc_id, smoothing_method, document_lengths, alpha, lamda
             )
             scores[doc_id] = score
@@ -186,7 +186,7 @@ class Scorer:
             elif smoothing_method == "mixture":
                 p = lamda * p_doc + (1 - lamda) * p_collection
                 
-            socre *= p
+            score *= p
             
         return scores
         
