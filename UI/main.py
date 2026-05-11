@@ -94,8 +94,8 @@ def get_highlighted_texts(description, query):
                 
                 # Highlight the word in the main description (case-insensitive replace using regex)
                 highlighted_description = re.sub(
-                    rf'(?i)\b{re.escape(clean_word)}\b', 
-                    highlight_html, 
+                    rf'(?i)\b{re.escape(clean_word)}\b',
+                    lambda _: highlight_html,
                     highlighted_description
                 )
                 

@@ -42,7 +42,7 @@ class Preprocessor:
         """
         tokens = text.split()
         filtered_tokens = [token for token in tokens if token not in self.stopwords]
-        return " ".join(filtered_tokens)
+        return filtered_tokens
         
     
     def normalize(self, word: str) -> str:

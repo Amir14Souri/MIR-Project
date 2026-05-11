@@ -38,14 +38,15 @@ class Snippet:
             not_exist_words (list): The list of words from the query that were not found in the document.
         """
         doc_tokens = raw_doc.split()
-        normalized_cache = [self.normalize(token) for token in doc_tokens]
+        cleaned_tokens = [token.strip(string.punctuation).lower() for token in doc_tokens]
+        normalized_cache = [self.normalize(token) for token in cleaned_tokens]
         doc_normalized_set = set(normalized_cache)
         
         query_tokens = self.remove_stopword(query)
         query_set = set()
         not_exist_words = []
         for token in query_tokens:
-            normalized = self.normalize(token)
+            normalized = self.normalize(token.strip(string.punctuation).lower())
             if normalized:
                 query_set.add(normalized)
                 if normalized not in doc_normalized_set:
