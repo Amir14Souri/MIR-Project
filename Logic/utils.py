@@ -39,7 +39,7 @@ search_engine = SearchEngine()
 def search(
     query: str,
     max_result_count: int,
-    method: str = "ltn-lnn",
+    method: str = "ltn.lnn",
     weights: list = [0.3, 0.3, 0.4],
     should_print=False,
     preferred_genre: str = None,
@@ -72,6 +72,9 @@ def search(
         Indexes.GENRES: weights[1],
         Indexes.DESCRIPTIONS: weights[2],
     }
+    if method.lower() == "okapibm25":
+        method = "bm25"
+
     return search_engine.search(
         query, method, weights, max_results=max_result_count, safe_ranking=True
     )

@@ -218,16 +218,15 @@ class SearchEngine:
         for field in self.fields:
             if weights.get(field, 0) == 0:
                 continue
-            
-            tiered_index = self.tiered_index[field].get(tier_name, {})
-            scorer = Scorer(tiered_index, self.metadata_index.get("document_count", 0))
-            
+
+            scorer = Scorer(self.document_indexes[field], self.metadata_index.get("document_count", 0))
+
             field_scores = scorer.compute_scores_with_unigram_model(
                 " ".join(query), smoothing_method, self.document_lengths_index[field], alpha, lamda
             )
-                
+
             for doc_id, score in field_scores.items():
-                tier_scores[doc_id] = tier_scores.get(doc_id, 0.0) + weights[field] * score
+                scores[doc_id] = scores.get(doc_id, 0.0) + weights[field] * score
 
 
     def _get_average_length(self, field):

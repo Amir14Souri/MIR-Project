@@ -70,6 +70,7 @@ class Preprocessor:
         processed_docs = []
         for doc in documents:
             processed_docs.append(self.preprocess_text(doc))
+        return processed_docs
             
 
 
