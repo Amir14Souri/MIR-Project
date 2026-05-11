@@ -1,5 +1,5 @@
-from indexes_enum import Indexes, Index_types
-from index_reader import Index_reader
+from Logic.indexer.indexes_enum import Indexes, Index_types
+from Logic.indexer.index_reader import Index_reader
 import json
 
 
@@ -98,5 +98,5 @@ class Tiered_index:
 
 if __name__ == "__main__":
     tiered = Tiered_index(
-        path="../../indexes/"
+        path="indexes/"
     )

@@ -1,6 +1,6 @@
 import json
-from indexes_enum import Indexes,Index_types
-from index_reader import Index_reader
+from Logic.indexer.indexes_enum import Indexes,Index_types
+from Logic.indexer.index_reader import Index_reader
 
 class DocumentLengthsIndex:
     def __init__(self,path='index/'):
@@ -47,7 +47,7 @@ class DocumentLengthsIndex:
             length = 0
             if field_content:
                 if isinstance(field_content, list):
-                    length = sum(len(item.split() for item in field_content if item))
+                    length = sum(len(item.split()) for item in field_content if item)
                 else:
                     length = len(field_content.split())
         
@@ -72,5 +72,5 @@ class DocumentLengthsIndex:
     
 
 if __name__ == '__main__':
-    document_lengths_index = DocumentLengthsIndex('../../indexes/')
+    document_lengths_index = DocumentLengthsIndex('indexes/')
     print('Document lengths index stored successfully.')

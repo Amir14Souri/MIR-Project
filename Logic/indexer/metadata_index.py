@@ -1,5 +1,5 @@
-from index_reader import Index_reader
-from indexes_enum import Indexes, Index_types
+from Logic.indexer.index_reader import Index_reader
+from Logic.indexer.indexes_enum import Indexes, Index_types
 import json
 
 class Metadata_index:
@@ -24,7 +24,7 @@ class Metadata_index:
         
         """
         documents_index = Index_reader(path, index_name=Indexes.DOCUMENTS)
-        return documents_index
+        return documents_index.index
 
 
     def create_metadata_index(self):    
@@ -63,7 +63,7 @@ class Metadata_index:
             
             if field_content:
                 if isinstance(field_content, list):
-                    total_length += sum(len(item.split() for item in field_content if item))
+                    total_length += sum(len(item.split()) for item in field_content if item)
                 else:
                     total_length += len(field_content.split())
                     
@@ -87,4 +87,4 @@ class Metadata_index:
 
     
 if __name__ == "__main__":
-    meta_index = Metadata_index('../../indexes/')
+    meta_index = Metadata_index('indexes/')
