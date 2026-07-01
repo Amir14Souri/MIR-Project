@@ -51,7 +51,7 @@ class DocumentLengthsIndex:
                 else:
                     length = len(field_content.split())
         
-        document_lengths[doc_id] = length
+            document_lengths[doc_id] = length
         return document_lengths
 
     
