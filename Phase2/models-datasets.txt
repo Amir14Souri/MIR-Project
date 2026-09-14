@@ -1,0 +1,4 @@
+models .pth and .model files + some dataset .csv files were to big to upload to quera
+
+Link to models-datasets.zip: https://my.sharif.edu/s/2DyeQR2E5fZfycc
+File's MD5 hash: 12d76228993ccdf38a65068467e6780c
