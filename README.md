@@ -4,7 +4,7 @@ This repository contains the projects and assignments for the **Modern Informati
 
 The repository is divided into three main phases, transitioning from classical search engines to modern multimodal AI-based retrieval systems.
 
-## 📖 Table of Contents
+## Table of Contents
 
 - [Phase 1: Search Engine & Classic IR Pipeline](#-phase-1-search-engine--classic-ir-pipeline) - Building a Goodreads book search engine from scratch.
 - [Phase 2: NLP & Representation Learning](#-phase-2-nlp--representation-learning) - Applying ML/NLP techniques for text classification, clustering, and embeddings.
@@ -12,7 +12,7 @@ The repository is divided into three main phases, transitioning from classical s
 
 ---
 
-## 🚀 Phase 1: Search Engine & Classic IR Pipeline
+## Phase 1: Search Engine & Classic IR Pipeline
 
 This phase implements a complete Information Retrieval (IR) pipeline for a Goodreads dataset. It features a backend logic engine and a Streamlit-based UI for interactive searching.
 
@@ -34,7 +34,7 @@ This phase implements a complete Information Retrieval (IR) pipeline for a Goodr
 
 ---
 
-## 🧠 Phase 2: NLP & Representation Learning
+## Phase 2: NLP & Representation Learning
 
 This phase focuses on natural language processing tasks applied to book datasets, implemented primarily via Jupyter Notebooks.
 
@@ -48,7 +48,7 @@ This phase focuses on natural language processing tasks applied to book datasets
 
 ---
 
-## 🔍 Phase 3: Hybrid Multimodal Product Search
+## Phase 3: Hybrid Multimodal Product Search
 
 This phase is an advanced project building a realistic product search pipeline for the Amazon Berkeley Objects (ABO) dataset. It supports single and combined text+image queries, fusing different retrieval methods, and generating structured LLM responses.
 
